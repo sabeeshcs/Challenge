@@ -1,0 +1,35 @@
+
+ 1. make the server application using the Makefile
+ 
+	cd ServerApp
+	make
+	
+	The out put file is stringServer
+	Use this as out server application
+	
+2.  Save your program that will run as a service in /usr/sbin
+
+    sudo cp stringServer /usr/sbin/stringServer
+
+3   Copy the script to init.d and set permission
+
+    sudo cp SetAsService/stringServScrpt /etc/init.d/stringServScrpt
+    sudo chmod 755 /etc/init.d/stringServScrpt
+	
+4.  Set the run level
+
+    cd /etc/init.d
+    sudo update-rc.d myscriptname defaults 97 03
+
+    reboot your machine and check if the service has started properly
+    sudo ps -A --sort cmd
+
+   if your service is not starting properly, you should first check if it runs when called by hand:
+   cd /etc/init.d
+   sudo myscriptname -start
+
+5.  Client Application is in Python.  For run this 
+     python ClientApp/ClientClass.py -p 8787 -h localhost -c 100  
+   
+   Thank you for using this application.
+   
