@@ -5,20 +5,16 @@
  * Created on 19 April, 2015, 2:48 PM
  */
 
-//#include <cstdlib>
-//#include<stdio.h>
-#include<stdlib.h>
-#include<string.h>
-#include<unistd.h>
-//#include<sys/types.h>
-//#include<sys/socket.h>
-//#include<netinet/in.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <unistd.h>
+#include <syslog.h>
+#include <string.h>
 #include<pthread.h>
-//#include <iostream>
-//#include <fstream>
-//#include <strings.h>
-//#include <stdlib.h>
-//#include <string>
 
 #include "ConnectionAcceptor.h"
 #include "ConnectionHandler.h"
@@ -29,17 +25,27 @@ using namespace std;
  * 
  */
 
+#define DAEMON_NAME "vdaemon"
+
+void process(){
+
+    syslog (LOG_NOTICE, "Writing to my Syslog");
+}   
+
 string GetRandomString(int len)
 {
-   srand(time(0));
-   string str = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-   int iPos;
-   while(str.size() != len) {
-    iPos = ((rand() % (str.size() - 1)));
-    str.erase (iPos, 1);
-   }
-   return str;
-   
+    string str = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    string strRet = "";
+    int max = 62;
+    int min = 1;
+    int n = 0;
+    while( strRet.size() <= len )
+    {
+        n = rand()%(str.size()-1)+1;
+        strRet.append(str, n,1);
+    }
+    
+    return strRet;   
 }
 
 
@@ -98,12 +104,22 @@ void* Handler(void* pParam)
 
 int main(int argc, char** argv) {
 
+    //port 1024 and 65535.
+    //less than 1024 is well-known ports
    //int iSocketFd = 0;
     int iPortNumber = 8787;
      
+    //Set our Logging Mask and open the Log
+    setlogmask(LOG_UPTO(LOG_NOTICE));
+    openlog(DAEMON_NAME, LOG_CONS | LOG_NDELAY | LOG_PERROR | LOG_PID, LOG_USER);
+
+    syslog(LOG_INFO, "Entering Daemon");
+
+    pid_t pid, sid;
+    
         if( argc > 3  )
         {
-                cout<<"Usage : server [-p <port>]"<<endl;
+               // cout<<"Usage : server [-p <port>]"<<endl;
                 return -1;
         }
     
@@ -116,15 +132,42 @@ int main(int argc, char** argv) {
             if( sOption.compare("-p") == 0)
             {
                 iPortNumber = atoi(argv[2]);
+                if( iPortNumber < 1024)
+                {
+                    //cout<<"well know port is not allowed for this application "<<endl;
+                    return -1;
+                }
             }
             else
             {
-                cout<<"Unknown option! Please use \'-p\' "<<endl;
+                //cout<<"Unknown option! Please use \'-p\' "<<endl;
                 return -1;
             }
         }
         
-        
+    //Fork the Parent Process
+    pid = fork();
+
+    if (pid < 0) { exit(EXIT_FAILURE); }
+
+    if (pid > 0) { exit(EXIT_SUCCESS); }
+
+    //Change File Mask
+    umask(0);
+
+    //Create a new Signature Id 
+    sid = setsid();
+    if (sid < 0) { exit(EXIT_FAILURE); }
+
+    //Change Directory
+    //If we cant find the directory we exit with failure.
+    if ((chdir("/")) < 0) { exit(EXIT_FAILURE); }
+
+    //Close Standard File Descriptors
+    close(STDIN_FILENO);
+    close(STDOUT_FILENO);
+    close(STDERR_FILENO);
+  
         pCConnectionAcceptor = new CConnectionAcceptor( iPortNumber);
        
         if(pCConnectionAcceptor->Start()  == 0)
@@ -136,6 +179,8 @@ int main(int argc, char** argv) {
            }            
         }
 
+        closelog ();
+        
         return 0;
 }
 

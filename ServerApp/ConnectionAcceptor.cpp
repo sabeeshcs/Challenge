@@ -1,3 +1,4 @@
+#include <sys/types.h>
 #include<sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -23,7 +24,8 @@ int CConnectionAcceptor::Start()
         return 1;
     }
 
-    m_iSocketFd = socket(AF_INET, SOCK_STREAM, 0);
+   //m_iSocketFd = socket(AF_INET, SOCK_STREAM, 0);
+    m_iSocketFd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if( m_iSocketFd < 0)
     {
         cout<<"Sorry! Can't create a Scoket!";
@@ -49,10 +51,39 @@ int CConnectionAcceptor::Start()
         return iResult;
     }
 
-    iResult = listen(m_iSocketFd, 5);
+    //iResult = listen(m_iSocketFd, 5);
+    iResult = listen( m_iSocketFd, SOMAXCONN);
     
     if (iResult != 0) 
     {
+        /*switch ( iResult )
+        {
+            case EBADF:
+                cout<<"Not a valid descriptor"<<endl;
+                break;                
+            case EINCONN:
+                cout<<"Socket is already connected"<<endl;
+                break;  
+            case EINVAL:
+                 cout<<"Socket has not been bound to a local address."<<endl;
+                 break;
+            case EMFILE:
+                cout<<"No more socket descriptors are available."<<endl;
+                break;
+            case ENETDOWN:
+                cout<<"Network subsystem has failed."<<endl;
+                break;
+            case ENOBUFS:
+                cout<<"No buffer space is available." << endl;
+                break;
+            case ENOTSOCK:
+                cout<<"Not a socket"<< endl
+                break;
+            case EOPNOTSUPP:
+                cout << "Socket that supports listen()."<<endl;
+                break;                        
+        };*/
+                
         cout<<"Sorry! listen faild!";
         return iResult;
     }
